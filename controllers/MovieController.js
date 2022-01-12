@@ -98,32 +98,6 @@ module.exports = {
         }
     },
 
-    // async getMoviesByName(req, res) {
-    //     res.header("Content-Type", 'application/json')
-    //     try {
-    //         const repoMovies = await movieRepository.getMovieByName(req.params.name)
-    //         const movies = await getAllRefactoredMovies(repoMovies)
-    //
-    //         res.status(200).send(movies)
-    //     } catch (error) {
-    //         console.error(`Unable to get a movie by its name (controller): ${error}`)
-    //         res.status(404).send('Unable to get a movie by its name (controller)')
-    //     }
-    // },
-    //
-    // async getMoviesByActorName(req, res) {
-    //     res.header("Content-Type", 'application/json')
-    //     try {
-    //         const repoMovies = await movieRepository.getMoviesByActorName(req.params.name)
-    //         const movies = await getAllRefactoredMovies(repoMovies)
-    //
-    //         res.status(200).send(JSON.stringify(movies, null, 2))
-    //     } catch (error) {
-    //         console.error(`Unable to get a movie by actor's name (controller): ${error}`)
-    //         res.status(404).send('Unable to get a movie by actor\'s name (controller)')
-    //     }
-    // },
-
     async addImportedMovies(req, res) {
         res.header("Content-Type", 'application/json')
         try {
