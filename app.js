@@ -22,7 +22,7 @@ Movie.belongsTo(Format)
 Movie.belongsToMany(Actor, { through: Link });
 Actor.belongsToMany(Movie, { through: Link });
 
-const PORT = process.env.PORT || 8080
+const PORT = process.env.APP_PORT || 8080
 const app = express()
 
 app.use(bodyParser.urlencoded({ extended: true }))
