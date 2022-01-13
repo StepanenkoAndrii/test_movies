@@ -9,12 +9,14 @@ const Actor = require('./models/Actor')
 const Format = require('./models/Format')
 const Link = require('./models/Link')
 
+// Trying to connect to the database
 try {
     db.sync().then(() => console.log('Database is working'))
 } catch (error) {
     console.error(`Unable to connect to the database: ${error}`)
 }
 
+// Using Foreign Keys linking db tables
 Format.hasOne(Movie)
 Movie.belongsTo(Format)
 Movie.belongsToMany(Actor, { through: Link });
@@ -30,6 +32,7 @@ app.use((req, res) => {
     res.status(400).send({ message: "Error in route."});
 })
 
+// Trying to connect to the server
 try {
     app.listen(PORT, () => console.log(`Server started on port ${PORT}`))
 } catch (error) {

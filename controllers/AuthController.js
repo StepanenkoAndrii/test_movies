@@ -2,11 +2,15 @@ const authRepository = require('../repositories/AuthRepository')
 const inputErrors = require('../errors/InputErrors')
 
 module.exports = {
+
+    // Registering new user
     async registerUser(req, res) {
         res.header("Content-Type", 'application/json')
         try {
+            // Getting new token
             const newToken = await authRepository.registerUser(req.body)
 
+            // Checking if any error were returned while creating new user
             if (newToken.length < 20) {
                 const error = await inputErrors.checkUserRegistration(newToken)
                 res.status(400).send(error)
@@ -19,11 +23,14 @@ module.exports = {
         }
     },
 
+    // Authorizing user
     async authorizeUser(req, res) {
         res.header("Content-Type", 'application/json')
         try {
+            // Getting new token
             const newToken = await authRepository.authorizeUser(req.body)
 
+            // Checking if any error were returned while authorizing user
             if (newToken.length < 10) {
                 const error = await inputErrors.checkUserAuthorization(newToken)
                 res.status(400).send(error)
