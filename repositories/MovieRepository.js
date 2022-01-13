@@ -50,6 +50,9 @@ async function deleteActorsAndLinks(movieId) {
     const movieLinks = await Link.findAll({
         where: {movieId: movieId}
     })
+
+    if (JSON.parse(JSON.stringify(movieLinks, null, 2)).length === 0) return 'movie'
+
     movieLinks.forEach(link => {
         actorIds.push(link.getDataValue('actorId'))
     })
@@ -72,6 +75,7 @@ async function deleteActorsAndLinks(movieId) {
             })
         }
     }
+    return ''
 }
 
 async function getFileData(filePath) {
@@ -92,15 +96,31 @@ module.exports = {
         let order = 'ASC'
         let limit = 20
         let offset = 0
+        let error = ''
 
         if (params.sort) {
-            if (params.sort === 'title') sort = 'title'
-            else if (params.sort === 'year') sort = 'year'
+            (params.sort === 'title') ? (sort = 'title') : (
+                (params.sort === 'year') ? (sort = 'year') : (error = 'sort')
+            )
         }
+        if (error === 'sort') return 'sort'
 
-        if (params.order) if (params.order === 'DESC') order = 'DESC'
-        if (params.limit) limit = params.limit
-        if (params.offset) offset = params.offset
+        if (params.order) (params.order === 'DESC') ? (order = 'DESC') : (
+            (params.order === 'ASC') ? (order = 'ASC') : (error = 'order')
+        )
+        if (error === 'order') return 'order'
+
+        if (params.limit) (!isNaN(params.limit)) ? (
+            (Number(params.limit) >= 0) ? (limit = params.limit) : (error = 'limit')
+        ) : (error = 'limit2')
+        if (error === 'limit') return 'limit'
+        else if (error === 'limit2') return 'limit2'
+
+        if (params.offset) (!isNaN(params.offset)) ? (
+            (Number(params.offset) >= 0) ? (offset = params.offset) : (error = 'offset')
+        ) : (error = 'offset2')
+        if (error === 'offset') return 'offset'
+        else if (error === 'offset2') return 'offset2'
 
         movies = await Movie.findAll({
             order: [[sort, order]],
@@ -113,10 +133,13 @@ module.exports = {
         movies = JSON.parse(JSON.stringify(movies, null, 2))
 
         if (params.actor) {
+
+            if (params.actor.split(' ').length < 2) return 'actor'
+
             const actor = await Actor.findAll({
                 where: {name: params.actor}
             })
-            if (JSON.parse(JSON.stringify(actor, null, 2)).length === 0) return 'data'
+            if (JSON.parse(JSON.stringify(actor, null, 2)).length === 0) return 'actor2'
             const links = await Link.findAll({
                 where: {actorId: JSON.parse(JSON.stringify(actor, null, 2))[0].id}
             })
@@ -125,13 +148,16 @@ module.exports = {
             if (params.title) {
                 for (const movie of movies)
                     if (movieIds.includes(movie.id) && movie.title === params.title) filteredMovies.push(movie)
+                if (filteredMovies.length === 0) return 'movie'
             } else {
                 for (const movie of movies)
                     if (movieIds.includes(movie.id)) filteredMovies.push(movie)
+                if (filteredMovies.length === 0) return 'movie2'
             }
         } else if (params.title) {
             for (const movie of movies)
                 if (movie.title === params.title) filteredMovies.push(movie)
+            if (filteredMovies.length === 0) return 'movie3'
         }
 
         return JSON.stringify(filteredMovies, null, 2)
@@ -139,6 +165,7 @@ module.exports = {
 
     async getMovieActors(id) {
         const actorIds = []
+
         const links = await Link.findAll({
             where: {movieId: id}
         })
@@ -148,6 +175,7 @@ module.exports = {
         const movieActors = await Actor.findAll({
             where: {id: actorIds}
         })
+
         return JSON.stringify(movieActors, null, 2)
     },
 
@@ -159,16 +187,40 @@ module.exports = {
         const movieFormat = await Format.findAll({
             where: {id: formatId}
         })
+
         return JSON.stringify(movieFormat, null, 2)
     },
 
     async addMovie(movieData) {
-        // console.log(movieData)
-        // console.log(Array.isArray(movieData.actors))
-        const format = await Format.findAll({
-            where: {name: movieData.format}
-        })
-        if (JSON.parse(JSON.stringify(format, null, 2)).length === 0) return 'format'
+        let splitActors
+        let format
+
+        if (typeof movieData.title === 'string') {
+            if (movieData.title.length === 0) return 'title'
+        } else return 'title2'
+
+        if (typeof movieData.year === 'number') {
+            if (movieData.year <= 0) return 'year'
+        } else return 'year2'
+
+        if (typeof movieData.format === 'string') {
+            if (movieData.format.length > 0) {
+                format = await Format.findAll({
+                    where: {name: movieData.format}
+                })
+                if (JSON.parse(JSON.stringify(format, null, 2)).length === 0) return 'format'
+            } else return 'format2'
+        } else return 'format3'
+
+        if (movieData.actors.length === 0 && typeof movieData.actors !== 'string' && !Array.isArray(movieData.actors))
+            return 'actor'
+        if (!Array.isArray(movieData.actors)) splitActors = movieData.actors.split(', ')
+        else splitActors = movieData.actors
+        for (const splitActor of splitActors) {
+            if (typeof splitActor !== 'string') return 'actor2'
+            if (splitActor.split(' ').length < 2) return 'actor3'
+        }
+
         const newMovie = await Movie.create({
             title: movieData.title,
             year: Number(movieData.year),
@@ -179,7 +231,8 @@ module.exports = {
     },
 
     async deleteMovie(id) {
-        await deleteActorsAndLinks(id)
+        const error = await deleteActorsAndLinks(id)
+        if (error === 'movie') return 0
         return await Movie.destroy({
             where: {id: id},
         })
@@ -189,6 +242,9 @@ module.exports = {
         const movie = await Movie.findAll({
             where: {id: id},
         })
+
+        if (JSON.parse(JSON.stringify(movie, null, 2)).length === 0) return 'movie'
+
         return JSON.stringify(movie, null, 2)
     },
 
@@ -202,6 +258,7 @@ module.exports = {
         let moviesArr = []
 
         const fileData = await getFileData('../test_task/text/sample_movies.txt')
+
         const movieDataArr = fileData.split('\r\n\r\n')
         for (const movieData of movieDataArr) {
             title = (movieData.split('\r\n')[0]).split(': ')[1]
