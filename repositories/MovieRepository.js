@@ -437,7 +437,7 @@ module.exports = {
         let moviesArr = []
 
         // Getting all data from the downloaded file
-        const fileData = await getFileData('../test_task/text/sample_movies.txt')
+        const fileData = await getFileData(process.env.FILEPATH)
 
         // Splitting file into parts (every part - one movie)
         const movieDataArr = fileData.split('\r\n\r\n')
