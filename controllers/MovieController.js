@@ -4,7 +4,7 @@ const inputErrors = require('../errors/InputErrors')
 // Getting all movies' actors
 async function getMovieActors(id) {
     try {
-        return await movieRepository.getMovieActors(id);
+        return await movieRepository.getMovieActors(id)
     } catch (error) {
         console.error(`Unable to get movie actors (controller): ${error}`)
     }
@@ -13,7 +13,7 @@ async function getMovieActors(id) {
 // Getting movie's format
 async function getMovieFormat(id) {
     try {
-        return await movieRepository.getMovieFormat(id);
+        return await movieRepository.getMovieFormat(id)
     } catch (error) {
         console.error(`Unable to get movie format (controller): ${error}`)
     }
@@ -101,6 +101,29 @@ module.exports = {
             res.status(201).send(refactoredMovie)
         } catch (error) {
             res.status(404).send(`Unable to add a new movie: ${error}`)
+        }
+    },
+
+    // Updating movie
+    async updateMovie(req, res) {
+        res.header("Content-Type", 'application/json')
+        try {
+            // Getting updated movie
+            const updatedMovie = await movieRepository.updateMovie(req.params.id, req.body)
+
+            // Checking if any error were returned while updating movie
+            if (updatedMovie.length < 10) {
+                const error = await inputErrors.checkNewMovie(updatedMovie)
+                res.status(400).send(error)
+                return
+            }
+
+            // Getting updated movie refactored
+            const refactoredMovie = await getRefactoredMovie(JSON.parse(updatedMovie)[0])
+
+            res.status(201).send(refactoredMovie)
+        } catch (error) {
+            res.status(404).send(`Unable to update a movie: ${error}`)
         }
     },
 

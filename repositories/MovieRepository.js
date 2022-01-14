@@ -128,6 +128,8 @@ module.exports = {
         let limit = 20
         let offset = 0
         let error = ''
+        let movieTitle = ''
+        let actorName = ''
 
         // Checking if sort parameter was given and what value it has
         if (params.sort) {
@@ -172,20 +174,27 @@ module.exports = {
             offset: offset
         })
 
-        // Returning all found movies if actor's name and movie's title parameters weren't given
-        if (!params.actor && !params.title) return JSON.stringify(movies, null, 2)
+        // Returning all found movies if actor's name, movie's title or both parameters weren't given
+        if (!params.actor && !params.title && !params.search) return JSON.stringify(movies, null, 2)
 
         movies = JSON.parse(JSON.stringify(movies, null, 2))
 
-        // If actor parameter was given
-        if (params.actor) {
+        // If search or actor parameter was given
+        if (params.search || params.actor) {
+            if (params.search) {
+                // Returning error if search parameter was given but with incorrect value
+                if (params.search.split(', ').length !== 2) return 'search'
 
-            // Returning error if actor's name was given but incorrectly
-            if (params.actor.split(' ').length < 2) return 'actor'
+                movieTitle = params.search.split(', ')[0]
+                actorName = params.search.split(', ')[1]
 
-            // Getting all actors by actor parameter given
+                // console.log(movieTitle, actorName)
+
+            } else actorName = params.actor
+
+            // Getting all actors by actor's name given
             const actor = await Actor.findAll({
-                where: {name: params.actor}
+                where: {name: {[Op.substring]: [actorName]}}
             })
 
             // Returning error if no actor with given name was found
@@ -199,19 +208,7 @@ module.exports = {
             // Getting all movies' ids which are in found links
             for (const link of links) movieIds.push(link.getDataValue('movieId'))
 
-            // If title parameter was given
-            if (params.title) {
-
-                // Getting an array of movies by actor's name and movie's title given
-                for (const movie of movies)
-                    if (movieIds.includes(movie.id) && movie.title === params.title) filteredMovies.push(movie)
-
-                // Returning error if no movies with given actor's name and movie's title were found
-                if (filteredMovies.length === 0) return 'movie'
-            }
-
-            // If actor parameter was given, but title wasn't
-            else {
+            if (!params.search) {
 
                 // Getting an array of movies by actor's name given
                 for (const movie of movies)
@@ -219,15 +216,23 @@ module.exports = {
 
                 // Returning error if no movies with given actor's name were found
                 if (filteredMovies.length === 0) return 'movie2'
+            } else {
+
+                // Getting an array of movies by actor's name and movie's title given
+                for (const movie of movies)
+                    if (movieIds.includes(movie.id) && movie.title.includes(movieTitle)) filteredMovies.push(movie)
+
+                // Returning error if no movies with given actor's name and movie's title were found
+                if (filteredMovies.length === 0) return 'movie'
             }
         }
 
-        // If title parameter was given, but name wasn't
-        else if (params.title) {
+        // If title parameter was given but search wasn't
+        if (params.title && !params.search) {
 
             // Getting an array of movies by movie's title given
             for (const movie of movies)
-                if (movie.title === params.title) filteredMovies.push(movie)
+                if (movie.title.includes(params.title)) filteredMovies.push(movie)
 
             // Returning error if no movies with given movie's title were found
             if (filteredMovies.length === 0) return 'movie3'
@@ -323,6 +328,75 @@ module.exports = {
         await addActorsAndLinks(movieData)
 
         return JSON.stringify(newMovie, null, 2)
+    },
+
+    // Updating movie
+    async updateMovie(id, movieData) {
+        let splitActors
+        let format
+
+        // Getting a movie from the database by its id
+        const movie = await Movie.findOne({
+            where: {id: id}
+        })
+
+        // Checking if movie with such id doesn't exist
+        if (JSON.parse(JSON.stringify(movie, null, 2)).length === 0) return 'movie'
+
+        // Checking if title was given incorrectly
+        if (typeof movieData.title === 'string') {
+            if (movieData.title.length === 0) return 'title'
+        } else return 'title2'
+
+        // Checking if year was given incorrectly
+        if (typeof movieData.year === 'number') {
+            if (movieData.year <= 0) return 'year'
+        } else return 'year2'
+
+        // Checking if format was given incorrectly
+        if (typeof movieData.format === 'string') {
+            if (movieData.format.length > 0) {
+                format = await Format.findAll({
+                    where: {name: movieData.format}
+                })
+                if (JSON.parse(JSON.stringify(format, null, 2)).length === 0) return 'format'
+            } else return 'format2'
+        } else return 'format3'
+
+        // Checking if actor's name was given incorrectly
+        if (movieData.actors.length === 0 && typeof movieData.actors !== 'string' && !Array.isArray(movieData.actors))
+            return 'actor'
+        if (!Array.isArray(movieData.actors)) splitActors = movieData.actors.split(', ')
+        else splitActors = movieData.actors
+        for (const splitActor of splitActors) {
+            if (typeof splitActor !== 'string') return 'actor2'
+            if (splitActor.split(' ').length < 2) return 'actor3'
+        }
+
+        // Getting updated movie by given values
+        movie.set({
+            title: movieData.title,
+            year: Number(movieData.year),
+            formatId: Number(JSON.parse(JSON.stringify(format, null, 2))[0].id),
+        })
+
+        // Saving movie changes
+        await movie.save()
+
+        // Deleting old actors and links
+        await deleteActorsAndLinks(id)
+
+        // Adding actors and links
+        await addActorsAndLinks(movieData)
+
+        // Returning movie refactored to normal visual representation
+        return JSON.stringify([{
+            id: movie.getDataValue('id'),
+            title: movie.getDataValue('title'),
+            year: movie.getDataValue('year'),
+            formatId: movie.getDataValue('formatId')
+        }], null, 2)
+
     },
 
     // Deleting movie

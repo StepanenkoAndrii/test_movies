@@ -84,6 +84,8 @@ module.exports = {
 
     async checkNewMovie(repoMovie) {
         switch (repoMovie) {
+            case "movie":
+                return 'Movie with such id doesn\'t exist'
             case "title":
                 return 'Incorrect title input (must be some title, not an empty string (f.e. Casablanca))'
             case "title2":
